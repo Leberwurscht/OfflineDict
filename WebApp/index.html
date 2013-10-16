@@ -1,0 +1,257 @@
+<!DOCTYPE html> 
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Dictionary</title>
+	<link rel="stylesheet" href="jquery.mobile-1.3.1.min.css" />
+	<script src="jquery-1.7.1.min.js"></script>
+	<script src="jquery.mobile-1.3.1.min.js"></script>
+	<script>
+function normalize(s) {
+  var r = s.toLowerCase();
+  r = r.replace(/ä/g,'a');
+  r = r.replace(/ö/g,'o');
+  r = r.replace(/ü/g,'u');
+  r = r.replace(/Ä/g,'A');
+  r = r.replace(/Ö/g,'O');
+  r = r.replace(/Ü/g,'U');
+  r = r.replace(/ß/g,'ss');
+  r = r.replace(/ñ/g,'n');
+  r = r.replace(/á/g,'a');
+  r = r.replace(/é/g,'e');
+  r = r.replace(/í/g,'i');
+  r = r.replace(/ó/g,'o');
+  r = r.replace(/ú/g,'u');
+  r = r.replace(/Á/g,'A');
+  r = r.replace(/É/g,'E');
+  r = r.replace(/Í/g,'I');
+  r = r.replace(/Ó/g,'O');
+  r = r.replace(/Ú/g,'U');
+  return r;
+}
+
+function searchtoken(query, callback) {
+  // open file
+  var sdcard = navigator.getDeviceStorage('pictures');
+  var request = sdcard.get("dict.jpg");
+  request.onerror = function () {
+    $("#log").append("error"+this.error.name+"\n");
+  };
+  request.onsuccess = function () {
+    var file = this.result;
+
+    // read constants from end of file
+    var constantsreader = new FileReader();
+
+    constantsreader.onloadend = function(evt) { if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+      var constants = evt.target.result;
+      var indexstart = parseInt(constants.substr(0,10));
+      var indexlength = parseInt(constants.substr(11,10));
+      var tokensize = parseInt(constants.substr(22,10));
+      var numbersize = parseInt(constants.substr(33,10));
+      var numbersize2 = parseInt(constants.substr(44,10));
+      var totalsize = tokensize+numbersize+numbersize2+3;
+      var nindex = Math.round(indexlength/totalsize);
+
+      // binary search
+      var lower, higher, current;
+
+      var iteration = function(current_content, previous_content) {
+        if (current_content < query) {
+          lower = current+1;
+        }
+        else if (previous_content >= query) {
+          higher = current-1;
+        }
+        else {
+          if (current_content<=query+String.fromCharCode(255)) callback(current,indexstart,totalsize,tokensize,numbersize,numbersize2,nindex);
+          else callback();
+
+          return;
+        }
+
+        current = Math.round((lower+higher)/2);
+
+        if (current>0) {
+          var blob = file.slice(indexstart+(current-1)*totalsize, indexstart+(current+1)*totalsize);
+        }
+        else {
+          var blob = file.slice(indexstart+(current)*totalsize, indexstart+(current+1)*totalsize);
+        }
+
+        var filereader = new FileReader();
+        filereader.onloadend = onloadend;
+        filereader.readAsBinaryString(blob);
+      };
+      var onloadend = function(evt) { if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+        var tokenline = evt.target.result;
+
+        var previous_content;
+        if (tokenline.length>totalsize) {
+          previous_content = tokenline.substr(0, tokensize).trim();
+          current_content = tokenline.substr(totalsize, tokensize).trim();
+        }
+        else {
+          current_content = tokenline.substr(0, tokensize).trim();
+        }
+
+        iteration(current_content, previous_content);
+      }};
+
+      lower = 0;
+      higher = nindex-1;
+      current = Math.round((lower+higher)/2);
+      if (current>0) {
+        var startblob = file.slice(indexstart+(current-1)*totalsize, indexstart+(current+1)*totalsize);
+      }
+      else {
+        var startblob = file.slice(indexstart+(current)*totalsize, indexstart+(current+1)*totalsize);
+      }
+
+      var startreader = new FileReader();
+      startreader.onloadend = onloadend;
+      startreader.readAsBinaryString(startblob);
+    }}
+
+    constantsreader.readAsBinaryString(file.slice(file.size-54,file.size));
+  };
+}
+
+$(document).ready(function(){
+  $("#btnSearch").click(function(){
+    $("#searchResults").html('');
+    $("#searchResults").listview("refresh");
+    $("#searchResults").show();
+
+    var query = $("#searchCriteria").val();
+    if (!query) return;
+
+    localStorage.setItem(localStorage.length,query);
+
+$("#log").text('');
+    searchtoken(normalize(query), function(pos,indexstart,totalsize,tokensize,numbersize,numbersize2,nindex){
+      if (pos!==0 && !pos) return;
+$("#log").append(query+' -> '+pos+'\n');
+
+      // open file
+      var sdcard = navigator.getDeviceStorage('pictures');
+      var request = sdcard.get("dict.jpg");
+      request.onerror = function () {
+        $("#log").append("error"+this.error.name+"\n");
+      };
+      request.onsuccess = function () {
+        var file = this.result;
+
+//        var reader1 = new FileReader();
+//        var reader2 = new FileReader();
+
+        var i=0;
+
+//        reader2.onloadend
+        var onentry = function(evt) {
+          if (evt.target.readyState != FileReader.DONE) return;
+
+          var line = evt.target.result;
+$("#log").append('line: '+line+'\n');
+$("#log").append('line: '+JSON.stringify(evt));
+//          $("#log").append(line);
+//          document.getElementById("log").textContent=line;
+//          $("#searchResults").append($("<li>").text(line));
+//          $("#searchResults").append($("<li>").text(escape(line)));
+          $("#searchResults").append($("<li>").text(decodeURIComponent(escape(line)).replace(/\t/g," ◆ ")));
+          $("#searchResults").listview("refresh");
+        };
+
+//        reader1.onloadend
+        var ontoken = function(evt) {
+          if (evt.target.readyState != FileReader.DONE) return;
+
+          var tokenline = evt.target.result;
+$("#log").append('tline: '+tokenline+'\n');
+          var content = tokenline.substr(0, tokensize).trim();
+          var linepos = parseInt(tokenline.substr(tokensize+1,numbersize).trim());
+          var linelength = parseInt(tokenline.substr(tokensize+numbersize+2,numbersize2).trim());
+
+          if (pos+i>=nindex) return;
+          if (content>query+String.fromCharCode(255)) return;
+
+//          $("#log").append(content+" "+linepos+" "+linelength+"\n");
+//          var blob2 = file.slice(linepos,linepos+linelength);
+//          reader2.readAsBinaryString(blob2);
+          var entryreader = new FileReader();
+          entryreader.onloadend = onentry;
+          entryreader.readAsBinaryString(file.slice(linepos,linepos+linelength));
+
+          if (i>200) return;
+
+          i++;
+$("#log").append('parsed_tline: '+(indexstart+totalsize*(pos+i))+'-'+(indexstart+totalsize*(pos+1+i))+'\n');
+//          var blob = file.slice(indexstart+totalsize*(pos+i),indexstart+totalsize*(pos+1+i));
+//          reader1.readAsBinaryString(blob);
+          var tokenreader = new FileReader();
+          tokenreader.onloadend = ontoken;
+          tokenreader.readAsBinaryString(file.slice(indexstart+totalsize*(pos+i),indexstart+totalsize*(pos+1+i)));
+$("#log").append('readstart: '+(indexstart+totalsize*(pos+i))+'\n');
+        };
+
+//        var blob = file.slice(indexstart+totalsize*pos,indexstart+totalsize*(pos+1));
+//        reader1.readAsBinaryString(blob);
+        var starttokenreader = new FileReader();
+        starttokenreader.onloadend = ontoken;
+        starttokenreader.readAsBinaryString(file.slice(indexstart+totalsize*pos,indexstart+totalsize*(pos+1)));
+      };
+    });
+  });
+});
+
+var hist_vis = false;
+$(document).ready(function(){
+  $("#btnHist").click(function(){
+    $("#history").html('');
+    if (hist_vis) {
+      hist_vis = false;
+      $("#history").hide();
+    }
+    else {
+      hist_vis = true;
+
+      for (var i=localStorage.length-1; i>=0 && i>localStorage.length-200;i--) {
+        var qu = localStorage.getItem(i);
+        $("#history").append($("<li>").text(qu));
+      }
+      $("#history").show();
+    }
+
+    $("#history").listview("refresh");
+  });
+});
+	</script>
+</head>
+
+<body>
+
+<!-- Start of first page: #home -->
+<div data-role="page" id="home">
+
+	<div data-role="header" data-position="fixed">
+	    <h3>Dict</h3>
+	</div><!-- /header -->
+
+	<div data-role="content">
+
+          <input type="search" id="searchCriteria" value="" placeholder="Search term" autofocus/>
+          <a href="#" id="btnSearch" data-role="button">Search</a>
+	  <div id="linebreak">&nbsp;</div>
+	  <ul data-role="listview" id="searchResults"></ul>
+	  <div id="linebreak">&nbsp;</div>
+          <a href="#" id="btnHist" data-role="button">History</a>
+	  <div id="linebreak">&nbsp;</div>
+	  <ul data-role="listview" id="history"></ul>
+
+	</div><!-- /content -->
+        <pre id="log" style="display:nonee;"></pre>
+</div><!-- /page home -->
+</body>
+</html>
