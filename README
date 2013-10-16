@@ -1,0 +1,14 @@
+A working prototype off an offline dictionary for Firefox OS.
+
+Build dictionary
+================
+Obtain file from www.dict.cc, save it as input.txt
+$ ./builddict.sh input.txt 20 5 2 dict.dat
+Increase numbers until you get no error messages.
+
+Installation
+============
+Save dict.dat to root directory of SD card of phone.
+
+Use Firefox OS Simulator to install the app contained in the
+WebApp folder to your phone.

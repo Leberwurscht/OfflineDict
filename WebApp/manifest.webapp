@@ -1,22 +1,21 @@
 {
-    "version":"0.1",
-    "name": "OfflineDict",
-    "description": "Dictionary that can be used offline",
-    "launch_path": "/index.html",
-    "icons": {
-        "16": "/images/icon_016.png",
-        "32": "/images/icon_032.png",
-        "48": "/images/icon_048.png",
-        "128": "/images/icon_128.png"
-    },
-	"developer": {
-        "name": "Leberwurscht",
-        "url": "http://www.hoegners.de"
-    },
-    "default_locale": "en",
-    "type": "privileged",
-    "permissions": {
-	"device-storage:sdcard": { "access": "readonly" },
-	"device-storage:pictures": { "access": "readonly" }
-    }
+  "version":"0.1",
+  "name": "OfflineDict",
+  "description": "Dictionary that can be used offline",
+  "launch_path": "/index.html",
+  "icons": {
+    "16": "/images/icon_016.png",
+    "32": "/images/icon_032.png",
+    "48": "/images/icon_048.png",
+    "128": "/images/icon_128.png"
+  },
+  "developer": {
+    "name": "Leberwurscht",
+    "url": "http://www.hoegners.de"
+  },
+  "default_locale": "en",
+  "type": "privileged",
+  "permissions": {
+    "device-storage:sdcard": { "access": "readonly" }
+  }
 }

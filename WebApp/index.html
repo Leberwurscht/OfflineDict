@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -34,10 +34,11 @@ function normalize(s) {
 
 function searchtoken(query, callback) {
   // open file
-  var sdcard = navigator.getDeviceStorage('pictures');
-  var request = sdcard.get("dict.jpg");
+  var sdcard = navigator.getDeviceStorage('sdcard');
+  var request = sdcard.get("dict.dat");
   request.onerror = function () {
-    $("#log").append("error"+this.error.name+"\n");
+    $("#home").append($("<p>").text( "error: "+this.error.name ));
+    $("#home").append($("<p>").text( "Make sure dict.dat exists on SD card." ));
   };
   request.onsuccess = function () {
     var file = this.result;
@@ -45,7 +46,9 @@ function searchtoken(query, callback) {
     // read constants from end of file
     var constantsreader = new FileReader();
 
-    constantsreader.onloadend = function(evt) { if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+    constantsreader.onloadend = function(evt) {
+      if (evt.target.readyState != FileReader.DONE) return;
+
       var constants = evt.target.result;
       var indexstart = parseInt(constants.substr(0,10));
       var indexlength = parseInt(constants.substr(11,10));
@@ -85,7 +88,9 @@ function searchtoken(query, callback) {
         filereader.onloadend = onloadend;
         filereader.readAsBinaryString(blob);
       };
-      var onloadend = function(evt) { if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+      var onloadend = function(evt) {
+        if (evt.target.readyState != FileReader.DONE) return;
+
         var tokenline = evt.target.result;
 
         var previous_content;
@@ -98,7 +103,7 @@ function searchtoken(query, callback) {
         }
 
         iteration(current_content, previous_content);
-      }};
+      };
 
       lower = 0;
       higher = nindex-1;
@@ -113,7 +118,7 @@ function searchtoken(query, callback) {
       var startreader = new FileReader();
       startreader.onloadend = onloadend;
       startreader.readAsBinaryString(startblob);
-    }}
+    };
 
     constantsreader.readAsBinaryString(file.slice(file.size-54,file.size));
   };
@@ -130,46 +135,35 @@ $(document).ready(function(){
 
     localStorage.setItem(localStorage.length,query);
 
-$("#log").text('');
     searchtoken(normalize(query), function(pos,indexstart,totalsize,tokensize,numbersize,numbersize2,nindex){
       if (pos!==0 && !pos) return;
-$("#log").append(query+' -> '+pos+'\n');
 
       // open file
-      var sdcard = navigator.getDeviceStorage('pictures');
-      var request = sdcard.get("dict.jpg");
+      var sdcard = navigator.getDeviceStorage('sdcard');
+      var request = sdcard.get("dict.dat");
       request.onerror = function () {
-        $("#log").append("error"+this.error.name+"\n");
+        $("#home").append($("<p>").text( "error: "+this.error.name ));
       };
       request.onsuccess = function () {
         var file = this.result;
 
-//        var reader1 = new FileReader();
-//        var reader2 = new FileReader();
-
         var i=0;
 
-//        reader2.onloadend
         var onentry = function(evt) {
           if (evt.target.readyState != FileReader.DONE) return;
 
           var line = evt.target.result;
-$("#log").append('line: '+line+'\n');
-$("#log").append('line: '+JSON.stringify(evt));
-//          $("#log").append(line);
-//          document.getElementById("log").textContent=line;
-//          $("#searchResults").append($("<li>").text(line));
-//          $("#searchResults").append($("<li>").text(escape(line)));
+
+          // note: I don't understant why decodeURIComponent(escape()) is needed to convert
+          //       between encodings
           $("#searchResults").append($("<li>").text(decodeURIComponent(escape(line)).replace(/\t/g," ◆ ")));
           $("#searchResults").listview("refresh");
         };
 
-//        reader1.onloadend
         var ontoken = function(evt) {
           if (evt.target.readyState != FileReader.DONE) return;
 
           var tokenline = evt.target.result;
-$("#log").append('tline: '+tokenline+'\n');
           var content = tokenline.substr(0, tokensize).trim();
           var linepos = parseInt(tokenline.substr(tokensize+1,numbersize).trim());
           var linelength = parseInt(tokenline.substr(tokensize+numbersize+2,numbersize2).trim());
@@ -177,9 +171,6 @@ $("#log").append('tline: '+tokenline+'\n');
           if (pos+i>=nindex) return;
           if (content>query+String.fromCharCode(255)) return;
 
-//          $("#log").append(content+" "+linepos+" "+linelength+"\n");
-//          var blob2 = file.slice(linepos,linepos+linelength);
-//          reader2.readAsBinaryString(blob2);
           var entryreader = new FileReader();
           entryreader.onloadend = onentry;
           entryreader.readAsBinaryString(file.slice(linepos,linepos+linelength));
@@ -187,17 +178,12 @@ $("#log").append('tline: '+tokenline+'\n');
           if (i>200) return;
 
           i++;
-$("#log").append('parsed_tline: '+(indexstart+totalsize*(pos+i))+'-'+(indexstart+totalsize*(pos+1+i))+'\n');
-//          var blob = file.slice(indexstart+totalsize*(pos+i),indexstart+totalsize*(pos+1+i));
-//          reader1.readAsBinaryString(blob);
+
           var tokenreader = new FileReader();
           tokenreader.onloadend = ontoken;
           tokenreader.readAsBinaryString(file.slice(indexstart+totalsize*(pos+i),indexstart+totalsize*(pos+1+i)));
-$("#log").append('readstart: '+(indexstart+totalsize*(pos+i))+'\n');
         };
 
-//        var blob = file.slice(indexstart+totalsize*pos,indexstart+totalsize*(pos+1));
-//        reader1.readAsBinaryString(blob);
         var starttokenreader = new FileReader();
         starttokenreader.onloadend = ontoken;
         starttokenreader.readAsBinaryString(file.slice(indexstart+totalsize*pos,indexstart+totalsize*(pos+1)));
@@ -236,7 +222,7 @@ $(document).ready(function(){
 <div data-role="page" id="home">
 
 	<div data-role="header" data-position="fixed">
-	    <h3>Dict</h3>
+	    <h3>OfflineDict</h3>
 	</div><!-- /header -->
 
 	<div data-role="content">
@@ -251,7 +237,6 @@ $(document).ready(function(){
 	  <ul data-role="listview" id="history"></ul>
 
 	</div><!-- /content -->
-        <pre id="log" style="display:nonee;"></pre>
 </div><!-- /page home -->
 </body>
 </html>
