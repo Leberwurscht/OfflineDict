@@ -1,5 +1,5 @@
 #!/bin/bash
-# usage: builddict.sh input_filename tokensize numbersize output_filename
+# usage: builddict.sh in_filename tokensize numbersize1 numbersize2 out_filename
 #
 # Input file format:
 #   lines starting with # or empty lines are ignored
