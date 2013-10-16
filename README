@@ -1,4 +1,5 @@
-A working prototype off an offline dictionary for Firefox OS.
+A working prototype of an offline dictionary for Firefox OS.
+Builds on https://github.com/rominirani/IndiaPincodesApp.
 
 Build dictionary
 ================
